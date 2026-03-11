@@ -5,23 +5,43 @@ import { useEffect, useMemo, useState } from 'react';
 
 type Role = 'employee' | 'manager' | 'admin';
 
+type Status = 'To Do' | 'In Progress' | 'Done';
+
 type Task = {
   id: string;
   title: string;
-  status: 'To Do' | 'In Progress' | 'Done';
+  status: Status;
   description?: string;
   assignedRole: Role;
   createdByRole: Role;
 };
 
 const EMPTY_STATE = 'No tasks yet. Add or reset demo data to begin.';
+const STATUSES: Status[] = ['To Do', 'In Progress', 'Done'];
 
 const STORAGE_KEYS = {
   ROLE: 'demo-role',
   TASKS: 'demo-tasks',
 };
 
-const demoSeed: Task[] = [];
+const demoSeed: Task[] = [
+  {
+    id: 't-emp-1',
+    title: 'Submit weekly report',
+    status: 'To Do',
+    description: 'Upload summary of completed tasks',
+    assignedRole: 'employee',
+    createdByRole: 'manager',
+  },
+  {
+    id: 't-emp-2',
+    title: 'Review demo checklist',
+    status: 'In Progress',
+    description: 'Validate login and dashboard flows',
+    assignedRole: 'employee',
+    createdByRole: 'manager',
+  },
+];
 
 export default function DashboardPage() {
   const [role, setRole] = useState<Role | null>(null);
@@ -39,12 +59,24 @@ export default function DashboardPage() {
     const storedTasks = localStorage.getItem(STORAGE_KEYS.TASKS);
     if (storedTasks) {
       try {
-        setTasks(JSON.parse(storedTasks));
+        const parsed: Task[] = JSON.parse(storedTasks);
+        setTasks(parsed.length > 0 ? parsed : demoSeed);
+        return;
       } catch {
-        setTasks(demoSeed);
+        // fall through to seed
       }
     }
+    // seed defaults if none
+    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(demoSeed));
+    setTasks(demoSeed);
   }, []);
+
+  const persistTasks = (next: Task[]) => {
+    setTasks(next);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(next));
+    }
+  };
 
   const visibleTasks = useMemo(() => {
     if (!role) return [] as Task[];
@@ -62,6 +94,11 @@ export default function DashboardPage() {
     }
     return base;
   }, [visibleTasks]);
+
+  const handleStatusChange = useMemo(
+    () => handleStatusChangeFactory(role, tasks, persistTasks),
+    [role, tasks],
+  );
 
   if (!role) return null;
 
@@ -91,7 +128,23 @@ export default function DashboardPage() {
                   <div style={{ fontWeight: 600 }}>{t.title}</div>
                   {t.description && <p style={mutedStyle}>{t.description}</p>}
                 </div>
-                <span style={pillStyle}>{t.status}</span>
+                {role === 'employee' ? (
+                  <select
+                    value={t.status}
+                    onChange={(e) =>
+                      handleStatusChange(t.id, e.target.value as Status)
+                    }
+                    style={selectStyle}
+                  >
+                    {STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span style={pillStyle}>{t.status}</span>
+                )}
               </li>
             ))}
           </ul>
@@ -99,6 +152,23 @@ export default function DashboardPage() {
       </section>
     </main>
   );
+}
+
+function handleStatusChangeFactory(
+  role: Role | null,
+  tasks: Task[],
+  persist: (next: Task[]) => void,
+) {
+  return (taskId: string, nextStatus: Status) => {
+    if (role !== 'employee') return; // only employee updates in this phase
+    if (!STATUSES.includes(nextStatus)) return;
+    const next = tasks.map((t) =>
+      t.id === taskId && t.assignedRole === 'employee'
+        ? { ...t, status: nextStatus }
+        : t,
+    );
+    persist(next);
+  };
 }
 
 function SummaryChips({
@@ -193,6 +263,13 @@ const pillStyle: React.CSSProperties = {
   background: '#e0f2fe',
   color: '#075985',
   fontWeight: 600,
+};
+
+const selectStyle: React.CSSProperties = {
+  padding: '8px 10px',
+  borderRadius: '10px',
+  border: '1px solid #cbd5e1',
+  background: '#fff',
 };
 
 const chipStyle: React.CSSProperties = {
