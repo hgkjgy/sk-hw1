@@ -31,7 +31,19 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+- Spec-First: Spec and plan are approved before any implementation work starts.
+- Scope Alignment: Planned work maps to explicit spec sections; scope changes
+  require spec/plan updates first.
+- Small, Traceable Commits: Break tasks into minimal, independently testable
+  slices with one task per commit.
+- AI-Driven Workflow: All code changes are produced through governed commands;
+  no manual edits outside the AI pipeline.
+- Minimal, Stable, Testable Demo: Prioritize the smallest demo that is stable
+  and testable before expanding scope.
+- Documentation Consistency: Doc updates are included with every related code
+  change—no mismatches allowed.
+- Preserve Completed Behavior: Plans include regression coverage for any area
+  touched to ensure no previously completed behavior regresses.
 
 ## Project Structure
 
